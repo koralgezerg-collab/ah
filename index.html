@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Aşkım Bird</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #70c5ce;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      margin: auto;
+      background: linear-gradient(to bottom, #70c5ce, #ffffff);
+    }
+
+    #restartBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 12px 24px;
+      font-size: 24px;
+      display: none;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #scoreDisplay {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 28px;
+      text-shadow: 2px 2px 4px #000;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="480" height="640"></canvas>
+<div id="scoreDisplay">Skor: 0</div>
+<button id="restartBtn">Yeniden Başla</button>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const restartBtn = document.getElementById('restartBtn');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+
+  const gravity = 0.5;
+  const jump = -8;
+  let velocity = 0;
+  let characterY = canvas.height / 2;
+  let characterX = 50;
+
+  const characterImg = new Image();
+  characterImg.src = 'aşkım.png'; // Görsel
+
+  const ahSound = new Audio('ah.mp3'); // Ses dosyası
+
+  const pipeWidth = 60;
+  const pipeGap = 150;
+  let pipes = [];
+  let frame = 0;
+  let gameOver = false;
+  let score = 0;
+  let passedPipes = [];
+
+  function resetGame() {
+    velocity = 0;
+    characterY = canvas.height / 2;
+    pipes = [];
+    frame = 0;
+    gameOver = false;
+    score = 0;
+    passedPipes = [];
+    scoreDisplay.innerText = 'Skor: 0';
+    restartBtn.style.display = 'none';
+    draw();
+  }
+
+  function drawCharacter() {
+    ctx.drawImage(characterImg, characterX, characterY, 50, 50);
+  }
+
+  function createPipe() {
+    const topHeight = Math.random() * (canvas.height - pipeGap - 100) + 20;
+    pipes.push({
+      x: canvas.width,
+      top: topHeight,
+      bottom: canvas.height - topHeight - pipeGap,
+      scored: false
+    });
+  }
+
+  function drawPipes() {
+    ctx.fillStyle = "#228B22";
+    pipes.forEach(pipe => {
+      ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+      ctx.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+    });
+  }
+
+  function updatePipes() {
+    pipes.forEach(pipe => {
+      pipe.x -= 2;
+
+      // Skor kontrolü
+      if (!pipe.scored && pipe.x + pipeWidth < characterX) {
+        pipe.scored = true;
+        score++;
+        scoreDisplay.innerText = 'Skor: ' + score;
+        ahSound.currentTime = 0;
+        ahSound.play();
+      }
+
+      // Çarpışma
+      if (
+        characterX + 40 > pipe.x &&
+        characterX < pipe.x + pipeWidth &&
+        (characterY < pipe.top || characterY + 40 > canvas.height - pipe.bottom)
+      ) {
+        gameOver = true;
+      }
+    });
+
+    pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+
+    if (frame % 100 === 0) {
+      createPipe();
+    }
+  }
+
+  function draw() {
+    if (gameOver) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#fff';
+      ctx.font = '36px Arial';
+      ctx.fillText('Oyun Bitti', canvas.width / 2 - 90, canvas.height / 2);
+      restartBtn.style.display = 'block';
+      return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawCharacter();
+    updatePipes();
+    drawPipes();
+
+    velocity += gravity;
+    characterY += velocity;
+
+    if (characterY + 50 > canvas.height) {
+      gameOver = true;
+    }
+
+    frame++;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && !gameOver) {
+      velocity = jump;
+    }
+  });
+
+  restartBtn.addEventListener('click', resetGame);
+
+  characterImg.onload = () => {
+    draw();
+  };
+</script>
+</body>
+</html>
